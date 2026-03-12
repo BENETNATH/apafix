@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Gestion des Utilisateurs</h1>
+
+        <a href="{{ url_for('admin_create_user') }}" class="btn btn-primary mb-3">Créer un nouvel utilisateur</a>
+
+        {% if users %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom d'utilisateur</th>
+                        <th>Admin</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{% if user.is_admin %}Oui{% else %}Non{% endif %}</td>
+                        <td>
+                            <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="btn btn-sm btn-info">Éditer</a>
+                            <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info" role="alert">
+            Aucun utilisateur enregistré.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

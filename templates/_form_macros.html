@@ -1,0 +1,38 @@
+{% macro render_field(field, custom_label=None) %}
+    <div class="mb-3">
+        {% set display_label = custom_label if custom_label is not none else field.label.text %}
+        {% if field.type == 'BooleanField' %}
+            <div class="form-check">
+                {{ field(class="form-check-input") }}
+                {% if display_label %}
+                    <label class="form-check-label" for="{{ field.id }}">{{ display_label }}</label>
+                {% endif %}
+            </div>
+        {% elif field.type == 'RadioField' %}
+            {% if display_label %}
+                <label class="form-label">{{ display_label }}</label>
+            {% endif %}
+            {% for subfield in field %}
+                <div class="form-check">
+                    {{ subfield(class="form-check-input") }}
+                    <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
+                </div>
+            {% endfor %}
+        {% elif field.type == 'TextAreaField' %}
+            {% if display_label %}
+                <label class="form-label" for="{{ field.id }}">{{ display_label }}</label>
+            {% endif %}
+            {{ field(class="form-control", rows="3") }}
+        {% else %}
+            {% if display_label %}
+                <label class="form-label" for="{{ field.id }}">{{ display_label }}</label>
+            {% endif %}
+            {{ field(class="form-control") }}
+        {% endif %}
+        {% if field.errors %}
+            <div class="invalid-feedback d-block">
+                {% for error in field.errors %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}

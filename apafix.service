@@ -1,0 +1,30 @@
+[Unit]
+Description=APAFIX - Portail de gestion des saisines APAFIS
+After=network.target
+
+[Service]
+Type=notify
+User=apafix
+Group=apafix
+WorkingDirectory=/opt/apafix
+Environment="PATH=/opt/apafix/venv/bin:/usr/bin"
+ExecStart=/opt/apafix/venv/bin/gunicorn --config /opt/apafix/gunicorn.conf.py wsgi:app
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+RuntimeDirectory=apafix
+LogsDirectory=apafix
+PIDFile=/var/run/apafix/apafix.pid
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/apafix/instance /var/log/apafix /var/run/apafix
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target

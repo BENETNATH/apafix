@@ -1,0 +1,9 @@
+.venv/
+venv/
+__pycache__/
+*.db
+doc/*.xml
+doc/
+*.pdf
+.env
+instance/

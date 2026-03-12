@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_form_macros.html" import render_field %}
+
+{% block title %}Éditer Saisine - {{ dap.nom_projet }}{% endblock %}
+
+{% macro render_nested_form(form_obj, structured_data_node, is_root=false, parent_label_rendered=false) %}
+    {% set current_label = structured_data_node.label %}
+    {% set current_tag = structured_data_node.tag %}
+    {% set has_children = structured_data_node.children is defined and structured_data_node.children|length > 0 %}
+    {% set is_leaf_node = structured_data_node.value is not none and not has_children %}
+
+    {% set label_rendered_as_heading = false %}
+    {% set depth = get_heading_depth(current_label) %}
+
+    {# Render heading based on numbered depth #}
+    {% if current_label and current_label != current_tag and not parent_label_rendered %}
+        {% if depth == 1 %}
+            <h3 class="mb-3 mt-4 section-heading-1">{{ current_label }}</h3>
+            {% set label_rendered_as_heading = true %}
+        {% elif depth == 2 %}
+            <h4 class="mb-3 mt-3 section-heading-2">{{ current_label }}</h4>
+            {% set label_rendered_as_heading = true %}
+        {% elif depth == 3 %}
+            <h5 class="mb-2 mt-3 section-heading-3">{{ current_label }}</h5>
+            {% set label_rendered_as_heading = true %}
+        {% elif depth >= 4 %}
+            <h6 class="subsection-title mt-2">{{ current_label }}</h6>
+            {% set label_rendered_as_heading = true %}
+        {% elif has_children %}
+            <h6 class="subsection-title mt-3">{{ current_label }}</h6>
+            {% set label_rendered_as_heading = true %}
+        {% endif %}
+    {% endif %}
+
+    {% if is_leaf_node %}
+        {% set field_name = structured_data_node.tag %}
+        {% if form_obj[field_name] is defined %}
+            {% set field = form_obj[field_name] %}
+            <div class="col-md-12 mb-3">
+                {{ render_field(field, custom_label=(current_label if not label_rendered_as_heading else '')) }}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if has_children %}
+        <div class="section-body mb-4 p-3 border rounded">
+            {% for child_tag, children_list in structured_data_node.children.items() %}
+                {% if form_obj[child_tag] is defined %}
+                    {% set child_form_field = form_obj[child_tag] %}
+                    {% if child_form_field.type == 'FieldList' %}
+                        {% for i in range(children_list|length) %}
+                            {% if i < child_form_field|length %}
+                                {{ render_nested_form(child_form_field.entries[i].form, children_list[i], parent_label_rendered=label_rendered_as_heading) }}
+                            {% endif %}
+                        {% endfor %}
+                    {% elif child_form_field.type == 'FormField' %}
+                        {{ render_nested_form(child_form_field.form, children_list[0], parent_label_rendered=label_rendered_as_heading) }}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Éditer Saisine: {{ dap.nom_projet }}</h1>
+        <p class="text-muted">{{ dap.numero_reference }} v{{ dap.version }}</p>
+
+        <form method="POST" action="{{ url_for('edit_dap', dap_id=dap.id) }}">
+            {{ dap_metadata_form.hidden_tag() }}
+            {{ dynamic_xml_form.hidden_tag() }} {# This is the main dynamic form #}
+
+            <h4 class="mb-3">Métadonnées</h4>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ render_field(dap_metadata_form.nom_projet) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ render_field(dap_metadata_form.numero_reference) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ render_field(dap_metadata_form.numero_court) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ render_field(dap_metadata_form.version) }}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Contenu de la Saisine</h4>
+                <a href="{{ url_for('download_xml', dap_id=dap.id) }}" class="btn btn-outline-secondary btn-sm">Télécharger le XML édité</a>
+            </div>
+
+            {# Render the structured XML data recursively using the dynamic_xml_form #}
+            {{ render_nested_form(dynamic_xml_form, structured_xml_data, is_root=true) }}
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-success btn-lg">Sauvegarder les modifications</button>
+                <a href="{{ url_for('list_daps') }}" class="btn btn-secondary btn-lg">Annuler</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

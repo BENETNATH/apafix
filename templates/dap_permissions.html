@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Gérer les Permissions pour {{ dap.nom_projet }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Gérer les permissions pour "{{ dap.nom_projet }}"</h1>
+    <p>Référence : {{ dap.numero_reference }} | Version : {{ dap.version }}</p>
+
+    <hr>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Ajouter une nouvelle permission</h3>
+            <form method="POST" action="{{ url_for('dap_permissions', dap_id=dap.id) }}">
+                {{ add_permission_form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ add_permission_form.user_id.label(class="form-label") }}
+                    {{ add_permission_form.user_id(class="form-select") }}
+                    {% if add_permission_form.user_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in add_permission_form.user_id.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    {{ add_permission_form.group_id.label(class="form-label") }}
+                    {{ add_permission_form.group_id(class="form-select") }}
+                    {% if add_permission_form.group_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in add_permission_form.group_id.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-check mb-3">
+                    {{ add_permission_form.can_edit(class="form-check-input") }}
+                    {{ add_permission_form.can_edit.label(class="form-check-label") }}
+                </div>
+                {{ add_permission_form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+
+    <hr>
+
+    <h3 class="mt-4">Permissions Actuelles</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Nom</th>
+                    <th>Peut éditer</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for permission in dap.permissions %}
+                <tr>
+                    <td>{{ 'Utilisateur' if permission.user_id else 'Groupe' }}</td>
+                    <td>{{ permission.user.username if permission.user_id else permission.group.name }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('dap_permissions', dap_id=dap.id) }}" class="d-inline">
+                            <input type="hidden" name="toggle_permission_id" value="{{ permission.id }}">
+                            <input type="hidden" name="can_edit_status" value="{{ 'false' if permission.can_edit else 'true' }}">
+                            <button type="submit" class="btn btn-sm {% if permission.can_edit %}btn-success{% else %}btn-secondary{% endif %}">
+                                {% if permission.can_edit %}Oui{% else %}Non{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('dap_permissions', dap_id=dap.id) }}" class="d-inline">
+                            <input type="hidden" name="delete_permission_id" value="{{ permission.id }}">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette permission ?');">Supprimer</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">Aucune permission spécifique définie pour cette saisine.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="{{ url_for('list_daps') }}" class="btn btn-secondary mt-4">Retour à la liste</a>
+</div>
+{% endblock %}

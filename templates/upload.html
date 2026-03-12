@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Uploader une Saisine{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Uploader un nouveau fichier de Saisine APAFIS (XML)</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('upload_dap') }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.file.label(class="form-label") }}
+                        {{ form.file(class="form-control") }}
+                        {% if form.file.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.file.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.numero_court.label(class="form-label") }}
+                        {{ form.numero_court(class="form-control", placeholder="Ex: PJT-001") }}
+                        {% if form.numero_court.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.numero_court.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

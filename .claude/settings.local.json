@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls C:/Users/petitd/Desktop/Dev/apafix/.venv/Scripts/python*)",
+      "Bash(C:/Users/petitd/Desktop/Dev/apafix/.venv/Scripts/python.exe -c \"import lxml; print\\('lxml ok'\\); import flask; print\\('flask ok'\\)\")",
+      "Bash(cd C:/Users/petitd/Desktop/Dev/apafix && .venv/Scripts/python.exe -c \"\nimport sys, os\nsys.path.insert\\(0, '.'\\)\nos.chdir\\('C:/Users/petitd/Desktop/Dev/apafix'\\)\n\nfrom xml_utils import parse_xml_to_structured_data, FORM_LABEL_MAP\nfrom forms import create_dynamic_form_class\n\nwith open\\('exemple.xml', 'r', encoding='utf-8'\\) as f:\n    xml_content = f.read\\(\\)\n\ndata = parse_xml_to_structured_data\\(xml_content\\)\n\nfrom app import create_app\napp = create_app\\(\\)\nwith app.app_context\\(\\), app.test_request_context\\(\\):\n    DynamicForm = create_dynamic_form_class\\(data, FORM_LABEL_MAP\\)\n    form = DynamicForm\\(\\)\n    \n    pe_form = getattr\\(form, 'ProceduresExperimentales'\\).form\n    expl_form = getattr\\(pe_form, 'ExplicationsProcedures'\\).form\n    proc_list = getattr\\(expl_form, 'Procedure'\\)\n    print\\(f'Procedure entries: {len\\(proc_list.entries\\)}'\\)\n    \n    first_proc = proc_list.entries[0].form\n    dd_form = getattr\\(first_proc, 'DescriptionDetaillee'\\).form\n    \n    from wtforms import Field\n    dd_fields = sorted\\([n for n in dir\\(dd_form\\) if isinstance\\(getattr\\(dd_form, n, None\\), Field\\)]\\)\n    print\\(f'DescriptionDetaillee fields: {dd_fields}'\\)\n    \n    dv_form = getattr\\(first_proc, 'DevenirAnimaux'\\).form\n    dv_fields = sorted\\([n for n in dir\\(dv_form\\) if isinstance\\(getattr\\(dv_form, n, None\\), Field\\)]\\)\n    print\\(f'DevenirAnimaux fields: {dv_fields}'\\)\n    \n    print\\('Form creation OK!'\\)\n\")"
+    ]
+  }
+}
