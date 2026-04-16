@@ -278,8 +278,9 @@ def parse_xml_to_structured_data(xml_content):
         data['tag'] = element.tag # Original tag for reconstruction
         # Use original tag for FORM_LABEL_MAP lookup (not attribute-modified)
         data['label'] = FORM_LABEL_MAP.get(element.tag, element.tag.replace('_', ' '))
-        # Store attributes separately for display/reconstruction
+        # Store attributes and namespace map separately for display/reconstruction
         data['attributes'] = dict(element.attrib) if element.attrib else {}
+        data['nsmap'] = dict(element.nsmap) if element.nsmap else {}
 
         value = element.text.strip() if element.text and element.text.strip() else None
         if value is not None:
@@ -321,7 +322,21 @@ def parse_xml_to_structured_data(xml_content):
 
         return data
 
-    return _parse_element(root)
+    # Extract processing instructions
+    parser = etree.XMLParser(recover=True, encoding='utf-8')
+    tree = etree.fromstring(xml_content.encode('utf-8'), parser=parser).getroottree()
+    
+    # Simple PI extraction (specifically for jaxfront)
+    pi_content = None
+    for pi in tree.xpath('//processing-instruction("jaxfront")'):
+        pi_content = pi.text
+        break
+
+    structured_data = _parse_element(root)
+    if pi_content:
+        structured_data['jaxfront_pi'] = pi_content
+        
+    return structured_data
 
 def merge_structured_data_for_form(data_list):
     """
@@ -441,16 +456,22 @@ def reconstruct_xml_from_structured_form_data(original_structured_data, form):
     preserving original structure and attributes from original_structured_data.
     """
     root_tag = original_structured_data['tag']
-    root_element = etree.Element(root_tag)
+    nsmap = original_structured_data.get('nsmap', {})
+    root_element = etree.Element(root_tag, nsmap=nsmap)
 
     def _reconstruct_element(current_xml_element, current_structured_data, current_form_data):
+        # Set attributes if they exist
+        if 'attributes' in current_structured_data:
+            for attr_name, attr_value in current_structured_data['attributes'].items():
+                current_xml_element.set(attr_name, attr_value)
+
         # When form_data is None, preserve original values from structured_data
         if current_form_data is None:
             if current_structured_data.get('value') is not None and not current_structured_data.get('children'):
                 value = current_structured_data['value']
                 if isinstance(value, bool):
                     current_xml_element.text = 'true' if value else 'false'
-                elif value:
+                elif value is not None:
                     current_xml_element.text = str(value)
             if current_structured_data.get('children'):
                 for child_tag, children_list in current_structured_data['children'].items():
@@ -488,7 +509,14 @@ def reconstruct_xml_from_structured_form_data(original_structured_data, form):
                         _reconstruct_element(new_child_element, child_data, None)
 
     _reconstruct_element(root_element, original_structured_data, form)
-    return etree.tostring(root_element, encoding='utf-8', pretty_print=True).decode('utf-8')
+    
+    # If there was a jaxfront processing instruction, add it before the root
+    if 'jaxfront_pi' in original_structured_data:
+        root_element.addprevious(etree.ProcessingInstruction('jaxfront', original_structured_data['jaxfront_pi']))
+        # When using addprevious, we need to get the tree to use tostring on it properly
+        return etree.tostring(root_element.getroottree(), encoding='utf-8', xml_declaration=True, pretty_print=True).decode('utf-8')
+
+    return etree.tostring(root_element, encoding='utf-8', xml_declaration=True, pretty_print=True).decode('utf-8')
 
 
 def _get_heading_depth(label):
