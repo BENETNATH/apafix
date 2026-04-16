@@ -187,85 +187,76 @@
         const tocContainer = document.getElementById('toc');
         if (!tocContainer) return;
         
-        // Select heading levels 1 to 4
-        const headings = document.querySelectorAll('h3.section-heading-1, h4.section-heading-2, h5.section-heading-3, h6.subsection-title');
-        
-        headings.forEach((heading, index) => {
-            // Generate ID
-            const id = 'section-' + index;
-            heading.id = id;
-            
-            // Determine level
+        // Build TOC: h3/h4 headings + numbered procedure name labels
+        const tocItems = [];
+
+        // Main section headings only (h3, h4) — skip h5/h6 sub-fields
+        document.querySelectorAll('h3.section-heading-1, h4.section-heading-2').forEach(el => {
+            if (!el.textContent.trim().toLowerCase().includes('description détaill')) {
+                tocItems.push({ el, type: 'heading' });
+            }
+        });
+
+        // Procedure name labels
+        document.querySelectorAll('label.form-label').forEach(lbl => {
+            if (lbl.textContent.trim().toLowerCase().includes('nom de la proc')) {
+                tocItems.push({ el: lbl, type: 'proc-label' });
+            }
+        });
+
+        // Sort by DOM order
+        tocItems.sort((a, b) => {
+            const pos = a.el.compareDocumentPosition(b.el);
+            return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+        });
+
+        let procCounter = 0;
+        tocItems.forEach(({ el, type }, index) => {
+            const id = 'toc-item-' + index;
+            el.id = id;
+
             let level = 1;
-            if (heading.tagName.toLowerCase() === 'h4' || heading.classList.contains('section-heading-2')) level = 2;
-            if (heading.tagName.toLowerCase() === 'h5' || heading.classList.contains('section-heading-3')) level = 3;
-            if (heading.tagName.toLowerCase() === 'h6' || heading.classList.contains('subsection-title')) level = 4;
-            
-            // Create nav link
+            if (type === 'proc-label') {
+                level = 3;
+            } else {
+                if (el.tagName === 'H4') level = 2;
+            }
+
+            let displayText = el.textContent.trim();
+            if (type === 'proc-label') {
+                procCounter++;
+                const inputId = el.getAttribute('for');
+                const inputEl = inputId ? document.getElementById(inputId) : null;
+                const val = inputEl && inputEl.value.trim();
+                displayText = procCounter + '. ' + (val ? (val.length > 60 ? val.substring(0, 60) + '...' : val) : '(sans titre)');
+            }
+
             const a = document.createElement('a');
             a.className = 'nav-link';
             a.href = '#' + id;
-            a.title = heading.textContent;
-            
-            // Customize text if it's a procedure section
-            let displayText = heading.textContent;
-            let lowerText = displayText.toLowerCase();
-            if (lowerText.includes("description détaillée de la procédure") || lowerText.includes("procédure expérimentale")) {
-                let nextEl = heading.nextElementSibling;
-                let foundTitle = null;
-                // Search subsequent siblings for the first text input/textarea
-                while (nextEl && !foundTitle && !nextEl.tagName.match(/^H[1-6]/)) {
-                    let input = nextEl.querySelector('input[type="text"], textarea');
-                    if (input && input.value && input.value.trim() !== '') {
-                        foundTitle = input.value.trim();
-                        // Truncate if insanely long
-                        if (foundTitle.length > 80) foundTitle = foundTitle.substring(0, 80) + '...';
-                    }
-                    nextEl = nextEl.nextElementSibling;
-                }
-                if (foundTitle) {
-                    displayText = "Proc. : " + foundTitle;
-                }
-            }
-            
-            // Indent based on level and allow wrapping
+            a.title = displayText;
             a.textContent = displayText;
-            a.style.marginLeft = ((level - 1) * 12) + 'px';
+            a.style.marginLeft = ((level - 1) * 14) + 'px';
             a.style.whiteSpace = 'normal';
             a.style.wordBreak = 'break-word';
-            if (level > 1) {
-                a.style.fontSize = '0.9em';
-            }
-            if (level === 1) {
-                a.style.fontWeight = '500';
-                a.classList.add('mt-2');
-            }
-            
+            if (level > 1) a.style.fontSize = '0.88em';
+            if (level === 1) { a.style.fontWeight = '600'; a.classList.add('mt-2'); }
+
             tocContainer.appendChild(a);
         });
 
-        // Simple scrollspy implementation
+        // Scrollspy
+        const headingsForSpy = tocItems.map(t => t.el);
         window.addEventListener('scroll', function() {
             let currentId = null;
-            
-            // Find the heading that is closest to the top of the viewport
-            for (let i = headings.length - 1; i >= 0; i--) {
-                const heading = headings[i];
-                const rect = heading.getBoundingClientRect();
-                
-                // 150px offset to account for floating menus/headers
-                if (rect.top <= 150) {
-                    currentId = heading.id;
-                    break;
-                }
+            for (let i = headingsForSpy.length - 1; i >= 0; i--) {
+                const rect = headingsForSpy[i].getBoundingClientRect();
+                if (rect.top <= 150) { currentId = headingsForSpy[i].id; break; }
             }
-            
-            // Update active state in TOC
             if (currentId) {
                 const allLinks = tocContainer.querySelectorAll('.nav-link');
                 allLinks.forEach(link => link.classList.remove('active'));
-                
-                const activeLink = tocContainer.querySelector(`.nav-link[href="#${currentId}"]`);
+                const activeLink = tocContainer.querySelector('.nav-link[href="#' + currentId + '"]');
                 if (activeLink) activeLink.classList.add('active');
             }
         });
@@ -293,77 +284,72 @@
 <script>
     let currentTargetFieldId = null;
 
-    // --- Grammar Checking ---
-    const grammarTextareas = document.querySelectorAll('.check-grammar');
-    
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+    // --- Grammar Checking (on click) ---
+    function runGrammarCheck(targetId) {
+        const field = document.getElementById(targetId);
+        const btn = document.querySelector('.grammar-check-btn[data-target="' + targetId + '"]');
+        if (!field || !btn) return;
+        const text = field.value;
+        if (!text || text.trim() === '') return;
+
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        fetch('/api/check_grammar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({text: text})
+        })
+        .then(async r => {
+            if (!r.ok) { let t = await r.text(); throw new Error(t); }
+            return r.json();
+        })
+        .then(data => {
+            btn.disabled = false;
+            // Reset classes
+            btn.className = 'btn btn-sm grammar-check-btn';
+            btn.setAttribute('data-target', targetId);
+            if (!data.matches || data.error) {
+                btn.innerHTML = '<i class="bi bi-spell-check"></i>';
+                btn.classList.add('btn-outline-danger');
+                btn.title = data.error || 'Erreur correcteur';
+            } else if (data.matches.length === 0) {
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                btn.classList.add('btn-outline-success');
+                btn.title = 'Aucune erreur détectée ✓';
+            } else {
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+                btn.classList.add('btn-outline-warning');
+                let tooltip = data.matches.length + ' suggestion(s) :\n';
+                data.matches.forEach(m => {
+                    let repl = m.replacements.slice(0, 3).join(', ');
+                    tooltip += '• ' + m.message + (repl ? ' → ' + repl : '') + '\n';
+                });
+                btn.title = tooltip.trim();
+            }
+            // Refresh Bootstrap tooltip if available
+            if (window.bootstrap && bootstrap.Tooltip) {
+                const ex = bootstrap.Tooltip.getInstance(btn);
+                if (ex) ex.dispose();
+                new bootstrap.Tooltip(btn, { trigger: 'hover focus', placement: 'top' });
+            }
+        })
+        .catch(e => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-spell-check"></i>';
+            btn.className = 'btn btn-sm btn-outline-danger grammar-check-btn';
+            btn.setAttribute('data-target', targetId);
+            btn.title = 'Correcteur indisponible : ' + e.message;
+        });
     }
 
-    grammarTextareas.forEach(ta => {
-        ta.addEventListener('blur', function() {
-            const text = this.value;
-            const targetId = this.id;
-            const feedbackEl = document.getElementById('grammar-feedback-' + targetId);
-            
-            if (!text || text.trim() === '') {
-                if (feedbackEl) feedbackEl.innerHTML = '';
-                return;
-            }
-            
-            if (feedbackEl) feedbackEl.innerHTML = '<span class="text-muted"><i class="spinner-border spinner-border-sm" role="status"></i> Vérification...</span>';
-            
-            fetch('/api/check_grammar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({text: text})
-            })
-            .then(async r => {
-                if (!r.ok) {
-                    let errText = await r.text();
-                    throw new Error("HTTP " + r.status + ": " + errText);
-                }
-                return r.json();
-            })
-            .then(data => {
-                if (!feedbackEl) return;
-                if (data.error) {
-                    feedbackEl.innerHTML = '<span class="text-danger">' + data.error + '</span>';
-                    return;
-                }
-                
-                if (!data.matches || data.matches.length === 0) {
-                    feedbackEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Aucune erreur détectée</span>';
-                    setTimeout(() => feedbackEl.innerHTML = '', 4000);
-                } else {
-                    let html = '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ' + data.matches.length + ' suggestion(s) :</span><ul class="mb-0 ps-3">';
-                    data.matches.slice(0, 5).forEach(m => {
-                        let repl = m.replacements.slice(0,3).join(', ');
-                        if (repl) repl = ' -> <b>' + repl + '</b>';
-                        html += `<li>${m.message} ${repl}</li>`;
-                    });
-                    if(data.matches.length > 5) html += '<li>...</li>';
-                    html += '</ul>';
-                    feedbackEl.innerHTML = html;
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                if (feedbackEl) feedbackEl.innerHTML = '<span class="text-danger">Correcteur indisponible (' + e.message + ')</span>';
-            });
-        });
-    });
-
-    // --- Snippets Logic ---
+    // --- Snippets & Grammar click handler ---
     document.addEventListener('click', function(e) {
+        // Grammar check button
+        if (e.target.closest('.grammar-check-btn')) {
+            runGrammarCheck(e.target.closest('.grammar-check-btn').getAttribute('data-target'));
+            return;
+        }
         // Save snippet
         if (e.target.closest('.snippet-save-btn')) {
             const btn = e.target.closest('.snippet-save-btn');
