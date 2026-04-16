@@ -115,9 +115,27 @@ def check_grammar():
     
     matches_dict = []
     for match in matches:
+        # Extract the faulty text snippet from the original text using offset
+        try:
+            start = match.offset
+            end = match.offset + match.errorLength
+            faulty_text = text[start:end]
+            # Build a short context: 20 chars before and after
+            ctx_start = max(0, start - 20)
+            ctx_end = min(len(text), end + 20)
+            context_before = text[ctx_start:start]
+            context_after = text[end:ctx_end]
+        except Exception:
+            faulty_text = ''
+            context_before = ''
+            context_after = ''
+
         matches_dict.append({
             'message': match.message,
-            'replacements': match.replacements
+            'replacements': match.replacements,
+            'faulty': faulty_text,
+            'context_before': context_before,
+            'context_after': context_after,
         })
     return jsonify({'matches': matches_dict})
 
