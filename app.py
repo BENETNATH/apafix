@@ -118,7 +118,7 @@ def check_grammar():
         # Extract the faulty text snippet from the original text using offset
         try:
             start = match.offset
-            end = match.offset + match.errorLength
+            end = match.offset + match.length  # correct attribute is 'length', not 'errorLength'
             faulty_text = text[start:end]
             # Build context: 40 chars before and after
             ctx_start = max(0, start - 40)
