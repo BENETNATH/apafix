@@ -154,12 +154,28 @@ def edit_dap(dap_id):
             return redirect(url_for('list_daps'))
         else:
             flash('Veuillez corriger les erreurs dans le formulaire.', 'danger')
+            # Detailed logging for debugging
+            app.logger.error(f"Erreur de validation pour le DAP {dap_id}")
+            app.logger.error(f"Métadonnées erreurs: {dap_metadata_form.errors}")
+            app.logger.error(f"Contenu dynamique erreurs: {dynamic_xml_form.errors}")
+            
             for field, errors in dap_metadata_form.errors.items():
                 for error in errors:
                     flash(f"Métadonnées - {dap_metadata_form[field].label.text} : {error}", 'warning')
-            for field, errors in dynamic_xml_form.errors.items():
-                for error in errors:
-                    flash(f"Contenu - {dynamic_xml_form[field].label.text} : {error}", 'warning')
+            
+            # Simple recursive error flashing for dynamic form
+            def flash_recursive_errors(form_errors, prefix=''):
+                for field_name, errors in form_errors.items():
+                    if isinstance(errors, dict):
+                        flash_recursive_errors(errors, prefix=f"{prefix}{field_name} > ")
+                    elif isinstance(errors, list):
+                        for err in errors:
+                            if isinstance(err, dict):
+                                flash_recursive_errors(err, prefix=f"{prefix}{field_name} > ")
+                            else:
+                                flash(f"Contenu - {prefix}{field_name} : {err}", 'warning')
+            
+            flash_recursive_errors(dynamic_xml_form.errors)
     
     if request.method == 'GET':
         # Populate the form with structured_xml_data
