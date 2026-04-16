@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectMultipleField, IntegerField, TextAreaField, FieldList, FormField
+from wtforms import Form, StringField, PasswordField, SubmitField, BooleanField, SelectMultipleField, IntegerField, TextAreaField, FieldList, FormField
 from wtforms_sqlalchemy.fields import QuerySelectField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Optional
 from flask_wtf.file import FileField, FileRequired, FileAllowed
@@ -84,7 +84,9 @@ def create_dynamic_form_class(structured_data, form_label_map, parent_path=''):
                 form_fields[child_field_name] = form_field_instance
 
     # Dynamically create the form class
-    DynamicForm = type(form_name, (FlaskForm,), form_fields)
+    # Use Form instead of FlaskForm for dynamic forms to avoid CSRF issues in nested structures,
+    # especially since we handle CSRF in the parent metadata form.
+    DynamicForm = type(form_name, (Form,), form_fields)
     return DynamicForm
 
 class DynamicDapForm(FlaskForm):

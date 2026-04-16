@@ -7,3 +7,5 @@ doc/
 *.pdf
 .env
 instance/
+.claude/
+.agent/

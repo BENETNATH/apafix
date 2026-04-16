@@ -154,6 +154,12 @@ def edit_dap(dap_id):
             return redirect(url_for('list_daps'))
         else:
             flash('Veuillez corriger les erreurs dans le formulaire.', 'danger')
+            for field, errors in dap_metadata_form.errors.items():
+                for error in errors:
+                    flash(f"Métadonnées - {dap_metadata_form[field].label.text} : {error}", 'warning')
+            for field, errors in dynamic_xml_form.errors.items():
+                for error in errors:
+                    flash(f"Contenu - {dynamic_xml_form[field].label.text} : {error}", 'warning')
     
     if request.method == 'GET':
         # Populate the form with structured_xml_data
