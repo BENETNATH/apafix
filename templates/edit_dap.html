@@ -308,9 +308,6 @@
             btn.disabled = false;
             btn.className = 'btn btn-sm grammar-check-btn';
             btn.setAttribute('data-target', targetId);
-            // Remove any existing popover
-            const exPop = bootstrap.Popover.getInstance(btn);
-            if (exPop) exPop.dispose();
 
             let popoverContent = '';
             if (!data.matches || data.error) {
@@ -337,14 +334,20 @@
                 });
                 popoverContent += '</ul>';
             }
-            // Create Bootstrap popover
-            new bootstrap.Popover(btn, {
+
+            // Dispose any existing popover, create fresh one and show it
+            const exPop = bootstrap.Popover.getInstance(btn);
+            if (exPop) exPop.dispose();
+            const pop = new bootstrap.Popover(btn, {
                 content: popoverContent,
                 html: true,
-                trigger: 'hover focus',
+                trigger: 'manual',
                 placement: 'left',
                 title: 'Résultats du correcteur'
             });
+            pop.show();
+            // Auto-hide after 8 seconds
+            setTimeout(() => pop.hide(), 8000);
         })
         .catch(e => {
             btn.disabled = false;
