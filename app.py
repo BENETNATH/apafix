@@ -136,7 +136,11 @@ def edit_dap(dap_id):
     dynamic_xml_form = DynamicXmlFormClass(request.form)
 
     if request.method == 'POST':
-        if dap_metadata_form.validate_on_submit() and dynamic_xml_form.validate():
+        # Validate both forms to ensure we capture all errors
+        meta_is_valid = dap_metadata_form.validate_on_submit()
+        xml_is_valid = dynamic_xml_form.validate()
+        
+        if meta_is_valid and xml_is_valid:
             dap_metadata_form.populate_obj(dap)
             
             # Reconstruct XML from the nested form data
