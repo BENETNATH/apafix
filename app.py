@@ -4,7 +4,7 @@ import os
 import re
 from collections import OrderedDict
 from dotenv import load_dotenv
-from flask import Flask, request, send_file, abort
+from flask import Flask, request, send_file, abort, jsonify
 from functools import wraps
 from xml_utils import generate_docx_from_xml, flatten_xml_to_form_data, reconstruct_xml_from_form_data, parse_xml_to_structured_data, populate_nested_form_from_structured_data, reconstruct_xml_from_structured_form_data, FORM_LABEL_MAP
 import xml.etree.ElementTree as ET
@@ -23,6 +23,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    import models # Import here so create_all knows about the models
     with app.app_context():
         db.create_all()
     login_manager.login_view = 'login'
@@ -33,7 +34,14 @@ def create_app():
     return app
 
 app = create_app()
-from models import Dap, User, Group, Permission
+from models import Dap, User, Group, Permission, Snippet
+import language_tool_python
+
+try:
+    grammar_tool = language_tool_python.LanguageTool('fr')
+except Exception as e:
+    grammar_tool = None
+    app.logger.error(f"Failed to initialize LanguageTool: {e}")
 
 def admin_required(f):
     @wraps(f)
@@ -76,7 +84,8 @@ def index():
 def list_daps():
     all_daps = Dap.query.order_by(Dap.id.desc()).all()
     if current_user.is_admin:
-        daps = all_daps
+        mes_saisines = [dap for dap in all_daps if dap.owner == current_user]
+        saisines_partagees = [dap for dap in all_daps if dap.owner != current_user]
     else:
         owned_daps_ids = {dap.id for dap in all_daps if dap.owner == current_user}
         user_perms_ids = {p.dap_id for p in Permission.query.filter_by(user_id=current_user.id).all()}
@@ -85,9 +94,74 @@ def list_daps():
             user_groups_ids = [g.id for g in current_user.groups]
             group_perms = Permission.query.filter(Permission.group_id.in_(user_groups_ids)).all()
             group_perms_ids = {p.dap_id for p in group_perms}
-        allowed_dap_ids = owned_daps_ids.union(user_perms_ids, group_perms_ids)
-        daps = [dap for dap in all_daps if dap.id in allowed_dap_ids]
-    return render_template('daps.html', daps=daps)
+        
+        allowed_dap_ids = user_perms_ids.union(group_perms_ids)
+        
+        mes_saisines = [dap for dap in all_daps if dap.id in owned_daps_ids]
+        saisines_partagees = [dap for dap in all_daps if dap.id in allowed_dap_ids and dap.id not in owned_daps_ids]
+        
+    return render_template('daps.html', mes_saisines=mes_saisines, saisines_partagees=saisines_partagees)
+
+@app.route('/api/check_grammar', methods=['POST'])
+@login_required
+def check_grammar():
+    if not grammar_tool:
+        return jsonify({'error': 'Le correcteur orthographique n\'est pas disponible sur ce serveur.'}), 503
+    text = request.json.get('text', '')
+    if not text:
+        return jsonify({'matches': []})
+    
+    matches = grammar_tool.check(text)
+    
+    matches_dict = []
+    for match in matches:
+        matches_dict.append({
+            'ruleId': match.ruleId,
+            'message': match.message,
+            'replacements': match.replacements,
+            'offset': match.offset,
+            'errorLength': match.errorLength,
+            'context': match.context
+        })
+    return jsonify({'matches': matches_dict})
+
+@app.route('/api/snippets', methods=['GET', 'POST'])
+@login_required
+def api_snippets():
+    if request.method == 'POST':
+        data = request.json
+        titre = data.get('titre')
+        contenu = data.get('contenu')
+        if not titre or not contenu:
+            return jsonify({'error': 'Titre et contenu obligatoires'}), 400
+            
+        snippet = Snippet(titre=titre, contenu=contenu, user_id=current_user.id)
+        db.session.add(snippet)
+        db.session.commit()
+        return jsonify({'id': snippet.id, 'titre': snippet.titre, 'contenu': snippet.contenu}), 201
+        
+    else:
+        search = request.args.get('q', '')
+        accessible_user_ids = {current_user.id}
+        if current_user.groups:
+            for g in current_user.groups:
+                for u in g.users:
+                    accessible_user_ids.add(u.id)
+                    
+        query = Snippet.query.filter(Snippet.user_id.in_(accessible_user_ids))
+        if search:
+            query = query.filter(Snippet.titre.ilike(f'%{search}%') | Snippet.contenu.ilike(f'%{search}%'))
+            
+        snippets = query.order_by(Snippet.id.desc()).all()
+        result = []
+        for s in snippets:
+            result.append({
+                'id': s.id,
+                'titre': s.titre,
+                'contenu': s.contenu,
+                'auteur': User.query.get(s.user_id).username
+            })
+        return jsonify(result)
 @app.route('/upload_dap', methods=['GET', 'POST'])
 @login_required
 def upload_dap():

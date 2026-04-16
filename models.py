@@ -47,3 +47,10 @@ class Permission(db.Model):
     dap_id = db.Column(db.Integer, db.ForeignKey('dap.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
+
+class Snippet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    titre = db.Column(db.String(150), nullable=False)
+    contenu = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)

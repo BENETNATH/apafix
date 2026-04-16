@@ -9,3 +9,4 @@ werkzeug
 lxml
 WTForms-SQLAlchemy
 gunicorn
+language-tool-python

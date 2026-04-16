@@ -43,7 +43,7 @@
     {% endif %}
 
     {% if has_children %}
-        <div class="section-body mb-4 p-3 border rounded">
+        <div class="section-body mb-4 p-3 border rounded bg-white">
             {% for child_tag, children_list in structured_data_node.children.items() %}
                 {% if form_obj[child_tag] is defined %}
                     {% set child_form_field = form_obj[child_tag] %}
@@ -63,16 +63,75 @@
 {% endmacro %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h1 class="mb-4">Éditer Saisine: {{ dap.nom_projet }}</h1>
-        <p class="text-muted">{{ dap.numero_reference }} v{{ dap.version }}</p>
+<style>
+    .floating-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        border-top: 1px solid #dee2e6;
+        padding: 15px 30px;
+        z-index: 1030;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    body {
+        padding-bottom: 80px; /* Make room for floating bar */
+    }
+    .sidebar-wrapper {
+        position: sticky;
+        top: 2rem;
+        height: calc(100vh - 6rem);
+        overflow-y: auto;
+        padding-right: 15px;
+    }
+    .sidebar-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar-wrapper::-webkit-scrollbar-thumb {
+        background-color: #ccc;
+        border-radius: 3px;
+    }
+    .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+        background-color: #e9ecef;
+        color: #495057;
+        font-weight: bold;
+    }
+    .nav-link {
+        color: #6c757d;
+        padding: 0.25rem 1rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-link:hover {
+        color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+</style>
 
-        <form method="POST" action="{{ url_for('edit_dap', dap_id=dap.id) }}">
+<div class="row">
+    <!-- Sidebar Navigation -->
+    <div class="col-md-3 d-none d-md-block border-end">
+        <div class="sidebar-wrapper">
+            <h5 class="text-muted mb-3 border-bottom pb-2">Sommaire</h5>
+            <nav id="toc" class="nav nav-pills flex-column">
+                <!-- JavaScript will populate this -->
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9 ms-sm-auto px-md-4">
+        <h1 class="mb-2">Éditer Saisine: {{ dap.nom_projet }}</h1>
+        <p class="text-muted mb-4 pb-3 border-bottom">{{ dap.numero_reference }} (v{{ dap.version }})</p>
+
+        <form id="edit-dap-form" method="POST" action="{{ url_for('edit_dap', dap_id=dap.id) }}">
             {{ dap_metadata_form.hidden_tag() }}
 
-            <h4 class="mb-3">Métadonnées</h4>
-            <div class="row">
+            <h4 class="mb-3 section-heading-1">Métadonnées de la Saisine</h4>
+            <div class="row mb-4 p-3 border rounded bg-white">
                 <div class="col-md-6 mb-3">
                     {{ render_field(dap_metadata_form.nom_projet) }}
                 </div>
@@ -87,21 +146,278 @@
                 </div>
             </div>
 
-            <hr class="my-4">
+            <hr class="my-5">
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Contenu de la Saisine</h4>
-                <a href="{{ url_for('download_xml', dap_id=dap.id) }}" class="btn btn-outline-secondary btn-sm">Télécharger le XML édité</a>
+            <div class="mb-4">
+                <h4 class="mb-3">Contenu Scientifique</h4>
+                <p class="text-muted small">Modifiez le contenu XML structuré ci-dessous. Les champs sont générés dynamiquement.</p>
             </div>
 
             {# Render the structured XML data recursively using the dynamic_xml_form #}
             {{ render_nested_form(dynamic_xml_form, structured_xml_data, is_root=true) }}
 
-            <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-success btn-lg">Sauvegarder les modifications</button>
-                <a href="{{ url_for('list_daps') }}" class="btn btn-secondary btn-lg">Annuler</a>
-            </div>
         </form>
     </div>
 </div>
+
+<!-- Floating Action Bar -->
+<div class="floating-action-bar">
+    <div>
+        <a href="{{ url_for('list_daps') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Retour à la liste
+        </a>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('download_xml', dap_id=dap.id) }}" class="btn btn-outline-primary" title="Télécharger le fichier XML original/édité">
+            <i class="bi bi-filetype-xml me-1"></i> Télécharger XML
+        </a>
+        <a href="{{ url_for('download_docx', dap_id=dap.id) }}" class="btn btn-outline-info" title="Télécharger en format DOCX">
+            <i class="bi bi-file-earmark-word me-1"></i> Télécharger DOCX
+        </a>
+        <button type="button" class="btn btn-success" onclick="document.getElementById('edit-dap-form').submit();">
+            <i class="bi bi-save me-1"></i> Sauvegarder les modifications
+        </button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContainer = document.getElementById('toc');
+        if (!tocContainer) return;
+        
+        // Select heading levels 1 to 3
+        const headings = document.querySelectorAll('h3.section-heading-1, h4.section-heading-2, h4.section-heading-1, h5.section-heading-3');
+        
+        headings.forEach((heading, index) => {
+            // Generate ID
+            const id = 'section-' + index;
+            heading.id = id;
+            
+            // Determine level
+            let level = 1;
+            if (heading.tagName.toLowerCase() === 'h4') level = 2;
+            if (heading.tagName.toLowerCase() === 'h5') level = 3;
+            if (heading.classList.contains('section-heading-2')) level = 2;
+            if (heading.classList.contains('section-heading-3')) level = 3;
+            
+            // Create nav link
+            const a = document.createElement('a');
+            a.className = 'nav-link text-truncate';
+            a.href = '#' + id;
+            a.title = heading.textContent;
+            
+            // Add ellipsis if text is too long and indent based on level
+            a.textContent = heading.textContent;
+            a.style.marginLeft = ((level - 1) * 12) + 'px';
+            if (level > 1) {
+                a.style.fontSize = '0.9em';
+            }
+            if (level === 1) {
+                a.style.fontWeight = '500';
+                a.classList.add('mt-2');
+            }
+            
+            tocContainer.appendChild(a);
+        });
+
+        // Simple scrollspy implementation
+        window.addEventListener('scroll', function() {
+            let currentId = null;
+            
+            // Find the heading that is closest to the top of the viewport
+            for (let i = headings.length - 1; i >= 0; i--) {
+                const heading = headings[i];
+                const rect = heading.getBoundingClientRect();
+                
+                // 150px offset to account for floating menus/headers
+                if (rect.top <= 150) {
+                    currentId = heading.id;
+                    break;
+                }
+            }
+            
+            // Update active state in TOC
+            if (currentId) {
+                const allLinks = tocContainer.querySelectorAll('.nav-link');
+                allLinks.forEach(link => link.classList.remove('active'));
+                
+                const activeLink = tocContainer.querySelector(`.nav-link[href="#${currentId}"]`);
+                if (activeLink) activeLink.classList.add('active');
+            }
+        });
+    });
+</script>
+
+<!-- Snippet Search Modal -->
+<div class="modal fade" id="snippetSearchModal" tabindex="-1" aria-labelledby="snippetSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="snippetSearchModalLabel">Insérer un Snippet</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="snippetSearchInput" class="form-control mb-3" placeholder="Rechercher par titre ou mot-clé...">
+        <div id="snippetSearchResults" class="list-group">
+          <!-- JS will populate this -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    let currentTargetFieldId = null;
+
+    // --- Grammar Checking ---
+    const grammarTextareas = document.querySelectorAll('.check-grammar');
+    
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    grammarTextareas.forEach(ta => {
+        ta.addEventListener('blur', function() {
+            const text = this.value;
+            const targetId = this.id;
+            const feedbackEl = document.getElementById('grammar-feedback-' + targetId);
+            
+            if (!text || text.trim() === '') {
+                if (feedbackEl) feedbackEl.innerHTML = '';
+                return;
+            }
+            
+            if (feedbackEl) feedbackEl.innerHTML = '<span class="text-muted"><i class="spinner-border spinner-border-sm" role="status"></i> Vérification...</span>';
+            
+            fetch('/api/check_grammar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({text: text})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!feedbackEl) return;
+                if (data.error) {
+                    feedbackEl.innerHTML = '<span class="text-danger">' + data.error + '</span>';
+                    return;
+                }
+                
+                if (!data.matches || data.matches.length === 0) {
+                    feedbackEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Aucune erreur détectée</span>';
+                    setTimeout(() => feedbackEl.innerHTML = '', 4000);
+                } else {
+                    let html = '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ' + data.matches.length + ' suggestion(s) :</span><ul class="mb-0 ps-3">';
+                    data.matches.slice(0, 5).forEach(m => {
+                        let repl = m.replacements.slice(0,3).map(r => r.value).join(', ');
+                        if (repl) repl = ' -> <b>' + repl + '</b>';
+                        html += `<li>${m.message} ${repl}</li>`;
+                    });
+                    if(data.matches.length > 5) html += '<li>...</li>';
+                    html += '</ul>';
+                    feedbackEl.innerHTML = html;
+                }
+            })
+            .catch(e => {
+                if (feedbackEl) feedbackEl.innerHTML = '<span class="text-danger">Erreur de connexion au correcteur.</span>';
+            });
+        });
+    });
+
+    // --- Snippets Logic ---
+    document.addEventListener('click', function(e) {
+        // Save snippet
+        if (e.target.closest('.snippet-save-btn')) {
+            const btn = e.target.closest('.snippet-save-btn');
+            const targetId = btn.getAttribute('data-target');
+            const content = document.getElementById(targetId).value;
+            
+            if (!content) {
+                alert("Le champ est vide.");
+                return;
+            }
+            
+            const titre = prompt("Entrez un titre pour sauvegarder ce texte long et le réutiliser :");
+            if (!titre) return;
+            
+            fetch('/api/snippets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({titre: titre, contenu: content})
+            })
+            .then(r => {
+                if (r.ok) alert("Snippet sauvegardé avec succès !");
+                else alert("Erreur lors de la sauvegarde.");
+            });
+        }
+        
+        // Open modal to insert snippet
+        if (e.target.closest('.snippet-insert-btn')) {
+            const btn = e.target.closest('.snippet-insert-btn');
+            currentTargetFieldId = btn.getAttribute('data-target');
+            loadSnippets('');
+        }
+    });
+
+    const snippetSearchInput = document.getElementById('snippetSearchInput');
+    if (snippetSearchInput) {
+        snippetSearchInput.addEventListener('keyup', debounce(function() {
+            loadSnippets(this.value);
+        }, 300));
+    }
+
+    function loadSnippets(query) {
+        const resultsContainer = document.getElementById('snippetSearchResults');
+        if (!resultsContainer) return;
+        resultsContainer.innerHTML = '<div class="p-3 text-center"><i class="spinner-border spinner-border-sm"></i> Chargement...</div>';
+        
+        fetch('/api/snippets?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(data => {
+            resultsContainer.innerHTML = '';
+            if (data.length === 0) {
+                resultsContainer.innerHTML = '<div class="p-3 text-muted">Aucun snippet trouvé.</div>';
+                return;
+            }
+            
+            data.forEach(s => {
+                const a = document.createElement('a');
+                a.className = 'list-group-item list-group-item-action flex-column align-items-start';
+                a.href = '#';
+                a.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                      <h6 class="mb-1 text-primary">${s.titre}</h6>
+                      <small class="text-muted"><i class="bi bi-person"></i> ${s.auteur}</small>
+                    </div>
+                    <p class="mb-1 small text-truncate" style="max-height: 40px; white-space: normal;">${s.contenu}</p>
+                `;
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (currentTargetFieldId) {
+                        const field = document.getElementById(currentTargetFieldId);
+                        const startPos = field.selectionStart;
+                        const endPos = field.selectionEnd;
+                        // Insert at cursor
+                        field.value = field.value.substring(0, startPos) + s.contenu + field.value.substring(endPos, field.value.length);
+                        // Trigger blur to run grammar check potentially
+                        field.focus(); 
+                        
+                        // Close modal using Bootstrap 5 API
+                        const modalEl = document.getElementById('snippetSearchModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                });
+                resultsContainer.appendChild(a);
+            });
+        });
+    }
+</script>
 {% endblock %}

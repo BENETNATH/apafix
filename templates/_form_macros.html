@@ -19,10 +19,19 @@
                 </div>
             {% endfor %}
         {% elif field.type == 'TextAreaField' %}
-            {% if display_label %}
-                <label class="form-label" for="{{ field.id }}">{{ display_label }}</label>
-            {% endif %}
-            {{ field(class="form-control", rows="3") }}
+            <div class="d-flex justify-content-between align-items-end mb-1">
+                {% if display_label %}
+                    <label class="form-label mb-0" for="{{ field.id }}">{{ display_label }}</label>
+                {% else %}
+                    <span></span>
+                {% endif %}
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-insert-btn" data-target="{{ field.id }}" title="Insérer un snippet" data-bs-toggle="modal" data-bs-target="#snippetSearchModal">Insérer Snippet</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-save-btn" data-target="{{ field.id }}" title="Sauvegarder ce texte en snippet">Sauvegarder</button>
+                </div>
+            </div>
+            {{ field(class="form-control check-grammar", rows="3") }}
+            <div class="grammar-feedback mt-1 small" id="grammar-feedback-{{ field.id }}"></div>
         {% else %}
             {% if display_label %}
                 <label class="form-label" for="{{ field.id }}">{{ display_label }}</label>
