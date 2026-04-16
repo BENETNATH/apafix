@@ -117,7 +117,7 @@ def check_grammar():
     for match in matches:
         try:
             m_offset = getattr(match, 'offset', None)
-            m_length = getattr(match, 'errorLength', getattr(match, 'length', None))
+            m_length = getattr(match, 'error_length', None)
             
             if m_offset is not None and m_length is not None:
                 start = int(m_offset)
@@ -131,11 +131,15 @@ def check_grammar():
                 # Estimate line number
                 line_num = text[:start].count('\n') + 1
             else:
-                raise ValueError(f"Missing offset/length. Attributes: {dir(match)}")
+                # Fallback to LanguageTool's native context if slice fails
+                faulty_text = getattr(match, 'matched_text', '')
+                context_before = getattr(match, 'context', '')
+                context_after = ''
+                line_num = None
         except Exception as e:
             print(f"[Grammar Check Error] {e}", flush=True)
-            faulty_text = ''
-            context_before = ''
+            faulty_text = getattr(match, 'matched_text', '')
+            context_before = getattr(match, 'context', '')
             context_after = ''
             line_num = None
 
