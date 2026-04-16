@@ -488,7 +488,8 @@ def reconstruct_xml_from_structured_form_data(original_structured_data, form):
                 if isinstance(value, bool):
                     current_xml_element.text = 'true' if value else 'false'
                 else:
-                    current_xml_element.text = str(value) if value is not None else ''
+                    text_value = str(value) if value is not None else ''
+                    current_xml_element.text = text_value.replace('\r\n', '\n').replace('\r', '\n')
 
         # Recursively process children
         if current_structured_data.get('children'):
