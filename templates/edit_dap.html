@@ -111,6 +111,30 @@
         color: #0d6efd;
         background-color: #f8f9fa;
     }
+    .grammar-panel {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: #fff;
+        max-height: 220px;
+        overflow-y: auto;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+    }
+    .grammar-panel-header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    .grammar-panel-body ul {
+        margin:0;
+        padding-left: 1.2rem;
+    }
+    .grammar-panel-body li {
+        padding: 3px 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+    .grammar-panel-body li:last-child { border-bottom: none; }
 </style>
 
 <div class="row">
@@ -228,7 +252,7 @@
                 const inputId = el.getAttribute('for');
                 const inputEl = inputId ? document.getElementById(inputId) : null;
                 const val = inputEl && inputEl.value.trim();
-                displayText = procCounter + '. ' + (val ? (val.length > 60 ? val.substring(0, 60) + '...' : val) : '(sans titre)');
+                displayText = val ? (val.length > 60 ? val.substring(0, 60) + '...' : val) : '(sans titre)';
             }
 
             const a = document.createElement('a');
@@ -287,13 +311,20 @@
     // --- Grammar Checking (on click) ---
     function runGrammarCheck(targetId) {
         const field = document.getElementById(targetId);
-        const btn = document.querySelector('.grammar-check-btn[data-target="' + targetId + '"]');
-        if (!field || !btn) return;
+        const checkBtn = document.querySelector('.grammar-check-btn[data-target="' + targetId + '"]');
+        const resultsBtn = document.querySelector('.grammar-results-btn[data-target="' + targetId + '"]');
+        const panel = document.getElementById('grammar-panel-' + targetId);
+        const panelBody = document.getElementById('grammar-panel-body-' + targetId);
+        const panelTitle = panel ? panel.querySelector('.grammar-panel-title') : null;
+        if (!field || !checkBtn) return;
         const text = field.value;
         if (!text || text.trim() === '') return;
 
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        btn.disabled = true;
+        checkBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        checkBtn.disabled = true;
+        // Hide old results while loading
+        if (panel) panel.classList.add('d-none');
+        if (resultsBtn) resultsBtn.classList.add('d-none');
 
         fetch('/api/check_grammar', {
             method: 'POST',
@@ -305,56 +336,54 @@
             return r.json();
         })
         .then(data => {
-            btn.disabled = false;
-            btn.className = 'btn btn-sm grammar-check-btn';
-            btn.setAttribute('data-target', targetId);
+            checkBtn.disabled = false;
+            checkBtn.className = 'btn btn-sm grammar-check-btn';
+            checkBtn.setAttribute('data-target', targetId);
 
-            let popoverContent = '';
             if (!data.matches || data.error) {
-                btn.innerHTML = '<i class="bi bi-check2-circle"></i>';
-                btn.classList.add('btn-outline-danger');
-                popoverContent = '<span class="text-danger">' + (data.error || 'Erreur correcteur') + '</span>';
+                checkBtn.innerHTML = '<i class="bi bi-check2-circle"></i>';
+                checkBtn.classList.add('btn-outline-danger');
+                if (panelTitle) panelTitle.innerHTML = '<span class="text-danger">Erreur correcteur</span>';
+                if (panelBody) panelBody.innerHTML = '<p class="text-danger mb-0 small">' + (data.error || 'Erreur inconnue') + '</p>';
             } else if (data.matches.length === 0) {
-                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
-                btn.classList.add('btn-outline-success');
-                popoverContent = '<span class="text-success">✓ Aucune erreur détectée</span>';
+                checkBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                checkBtn.classList.add('btn-outline-success');
+                if (panelTitle) panelTitle.innerHTML = '<span class="text-success">✓ Aucune erreur détectée</span>';
+                if (panelBody) panelBody.innerHTML = '<p class="text-success mb-0 small"><i class="bi bi-check-circle"></i> Le texte ne présente aucune erreur détectée.</p>';
             } else {
-                btn.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
-                btn.classList.add('btn-outline-warning');
-                popoverContent = '<strong>' + data.matches.length + ' suggestion(s)</strong><ul class="mb-0 ps-3 mt-1">';
-                data.matches.forEach(m => {
-                    let repl = m.replacements.slice(0, 3).join(', ');
-                    let line = '';
-                    if (m.faulty && m.faulty.trim()) {
-                        line += '<span class="text-danger fw-bold">«' + m.faulty.trim() + '»</span> : ';
-                    }
-                    line += m.message;
-                    if (repl) line += ' <span class="text-success">→ ' + repl + '</span>';
-                    popoverContent += '<li class="small">' + line + '</li>';
-                });
-                popoverContent += '</ul>';
+                checkBtn.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+                checkBtn.classList.add('btn-outline-warning');
+                if (panelTitle) panelTitle.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> ' + data.matches.length + ' suggestion(s)</span>';
+                if (panelBody) {
+                    let html = '<ul class="mb-0">';
+                    data.matches.forEach(m => {
+                        let repl = m.replacements.slice(0, 3).join(', ');
+                        let line = '';
+                        if (m.faulty && m.faulty.trim()) {
+                            line += '<span class="text-danger fw-semibold">«' + m.faulty.trim() + '»</span> : ';
+                        }
+                        line += m.message;
+                        if (repl) line += ' <span class="text-success fw-semibold">→ ' + repl + '</span>';
+                        html += '<li>' + line + '</li>';
+                    });
+                    html += '</ul>';
+                    panelBody.innerHTML = html;
+                }
             }
 
-            // Dispose any existing popover, create fresh one and show it
-            const exPop = bootstrap.Popover.getInstance(btn);
-            if (exPop) exPop.dispose();
-            const pop = new bootstrap.Popover(btn, {
-                content: popoverContent,
-                html: true,
-                trigger: 'manual',
-                placement: 'left',
-                title: 'Résultats du correcteur'
-            });
-            pop.show();
-            // Auto-hide after 8 seconds
-            setTimeout(() => pop.hide(), 8000);
+            // Show results button and open the panel automatically
+            if (resultsBtn) resultsBtn.classList.remove('d-none');
+            if (panel) panel.classList.remove('d-none');
         })
         .catch(e => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check2-circle"></i>';
-            btn.className = 'btn btn-sm btn-outline-danger grammar-check-btn';
-            btn.setAttribute('data-target', targetId);
-            btn.title = 'Correcteur indisponible : ' + e.message;
+            checkBtn.disabled = false;
+            checkBtn.innerHTML = '<i class="bi bi-check2-circle"></i>';
+            checkBtn.className = 'btn btn-sm btn-outline-danger grammar-check-btn';
+            checkBtn.setAttribute('data-target', targetId);
+            if (panelTitle) panelTitle.innerHTML = '<span class="text-danger">Erreur</span>';
+            if (panelBody) panelBody.innerHTML = '<p class="text-danger mb-0 small">Correcteur indisponible : ' + e.message + '</p>';
+            if (resultsBtn) resultsBtn.classList.remove('d-none');
+            if (panel) panel.classList.remove('d-none');
         });
     }
 
@@ -363,6 +392,20 @@
         // Grammar check button
         if (e.target.closest('.grammar-check-btn')) {
             runGrammarCheck(e.target.closest('.grammar-check-btn').getAttribute('data-target'));
+            return;
+        }
+        // Toggle grammar results panel
+        if (e.target.closest('.grammar-results-btn')) {
+            const targetId = e.target.closest('.grammar-results-btn').getAttribute('data-target');
+            const panel = document.getElementById('grammar-panel-' + targetId);
+            if (panel) panel.classList.toggle('d-none');
+            return;
+        }
+        // Close grammar panel
+        if (e.target.closest('.grammar-panel-close')) {
+            const targetId = e.target.closest('.grammar-panel-close').getAttribute('data-target');
+            const panel = document.getElementById('grammar-panel-' + targetId);
+            if (panel) panel.classList.add('d-none');
             return;
         }
         // Save snippet
