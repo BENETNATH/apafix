@@ -116,12 +116,8 @@ def check_grammar():
     matches_dict = []
     for match in matches:
         matches_dict.append({
-            'ruleId': match.ruleId,
             'message': match.message,
-            'replacements': match.replacements,
-            'offset': match.offset,
-            'errorLength': match.errorLength,
-            'context': match.context
+            'replacements': match.replacements
         })
     return jsonify({'matches': matches_dict})
 
@@ -159,9 +155,20 @@ def api_snippets():
                 'id': s.id,
                 'titre': s.titre,
                 'contenu': s.contenu,
-                'auteur': User.query.get(s.user_id).username
+                'auteur': User.query.get(s.user_id).username,
+                'can_delete': (s.user_id == current_user.id or current_user.is_admin)
             })
         return jsonify(result)
+
+@app.route('/api/snippets/<int:snippet_id>', methods=['DELETE'])
+@login_required
+def delete_snippet(snippet_id):
+    snippet = Snippet.query.get_or_404(snippet_id)
+    if snippet.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'Non autorisé'}), 403
+    db.session.delete(snippet)
+    db.session.commit()
+    return jsonify({'success': True}), 200
 @app.route('/upload_dap', methods=['GET', 'POST'])
 @login_required
 def upload_dap():

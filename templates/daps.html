@@ -5,25 +5,22 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Saisines</h1>
-            <div>
-                <a href="{{ url_for('upload_dap') }}" class="btn btn-primary">Uploader une nouvelle Saisine</a>
-            </div>
-        </div>
-
         <!-- Search Bar -->
         <div class="mb-4">
-            <input type="text" id="dapSearch" class="form-control" placeholder="Rechercher une saisine par nom ou référence...">
+            <input type="text" id="dapSearch" class="form-control"
+                placeholder="Rechercher une saisine par nom ou référence...">
         </div>
 
         <!-- Tabs -->
         <ul class="nav nav-tabs mb-4" id="dapTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="mes-saisines-tab" data-bs-toggle="tab" data-bs-target="#mes-saisines" type="button" role="tab" aria-controls="mes-saisines" aria-selected="true">Mes Saisines</button>
+                <button class="nav-link active" id="mes-saisines-tab" data-bs-toggle="tab"
+                    data-bs-target="#mes-saisines" type="button" role="tab" aria-controls="mes-saisines"
+                    aria-selected="true">Mes Saisines</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="partagees-tab" data-bs-toggle="tab" data-bs-target="#partagees" type="button" role="tab" aria-controls="partagees" aria-selected="false">Saisines Partagées</button>
+                <button class="nav-link" id="partagees-tab" data-bs-toggle="tab" data-bs-target="#partagees"
+                    type="button" role="tab" aria-controls="partagees" aria-selected="false">Saisines Partagées</button>
             </li>
         </ul>
 
@@ -50,11 +47,17 @@
                                 <td>{{ dap.numero_court if dap.numero_court else 'N/A' }}</td>
                                 <td>{{ dap.version }}</td>
                                 <td>
-                                    <a href="{{ url_for('edit_dap', dap_id=dap.id) }}" class="btn btn-sm btn-info">Éditer</a>
-                                    <a href="{{ url_for('download_xml', dap_id=dap.id) }}" class="btn btn-primary btn-sm">(.xml)</a>
-                                    <a href="{{ url_for('download_docx', dap_id=dap.id) }}" class="btn btn-info btn-sm">(.docx)</a>
-                                    <a href="{{ url_for('dap_permissions', dap_id=dap.id) }}" class="btn btn-secondary btn-sm">Permissions</a>
-                                    <form action="{{ url_for('delete_dap', dap_id=dap.id) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ?');" style="display: inline;">
+                                    <a href="{{ url_for('edit_dap', dap_id=dap.id) }}"
+                                        class="btn btn-sm btn-info">Éditer</a>
+                                    <a href="{{ url_for('download_xml', dap_id=dap.id) }}"
+                                        class="btn btn-primary btn-sm">(.xml)</a>
+                                    <a href="{{ url_for('download_docx', dap_id=dap.id) }}"
+                                        class="btn btn-info btn-sm">(.docx)</a>
+                                    <a href="{{ url_for('dap_permissions', dap_id=dap.id) }}"
+                                        class="btn btn-secondary btn-sm">Permissions</a>
+                                    <form action="{{ url_for('delete_dap', dap_id=dap.id) }}" method="POST"
+                                        onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ?');"
+                                        style="display: inline;">
                                         <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                                     </form>
                                 </td>
@@ -93,10 +96,13 @@
                                 <td>{{ dap.owner.username }}</td>
                                 <td>
                                     {% if check_permission(dap, current_user) %}
-                                    <a href="{{ url_for('edit_dap', dap_id=dap.id) }}" class="btn btn-sm btn-info">Éditer</a>
+                                    <a href="{{ url_for('edit_dap', dap_id=dap.id) }}"
+                                        class="btn btn-sm btn-info">Éditer</a>
                                     {% endif %}
-                                    <a href="{{ url_for('download_xml', dap_id=dap.id) }}" class="btn btn-primary btn-sm">(.xml)</a>
-                                    <a href="{{ url_for('download_docx', dap_id=dap.id) }}" class="btn btn-info btn-sm">(.docx)</a>
+                                    <a href="{{ url_for('download_xml', dap_id=dap.id) }}"
+                                        class="btn btn-primary btn-sm">(.xml)</a>
+                                    <a href="{{ url_for('download_docx', dap_id=dap.id) }}"
+                                        class="btn btn-info btn-sm">(.docx)</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -113,24 +119,24 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('dapSearch');
-    
-    searchInput.addEventListener('keyup', function() {
-        const filter = this.value.toLowerCase();
-        const rows = document.querySelectorAll('.dap-row');
-        
-        rows.forEach(row => {
-            const nom = row.querySelector('.dap-nom').textContent.toLowerCase();
-            const ref = row.querySelector('.dap-ref').textContent.toLowerCase();
-            
-            if (nom.includes(filter) || ref.includes(filter)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('dapSearch');
+
+        searchInput.addEventListener('keyup', function () {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.dap-row');
+
+            rows.forEach(row => {
+                const nom = row.querySelector('.dap-nom').textContent.toLowerCase();
+                const ref = row.querySelector('.dap-ref').textContent.toLowerCase();
+
+                if (nom.includes(filter) || ref.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         });
     });
-});
 </script>
 {% endblock %}

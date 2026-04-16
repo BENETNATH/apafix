@@ -13,7 +13,7 @@ echo "=== Installation d'APAFIX ==="
 echo "[1/6] Installation des dépendances système..."
 if command -v apt-get &>/dev/null; then
     apt-get update -qq
-    apt-get install -y -qq python3 python3-venv python3-pip nginx
+    apt-get install -y -qq python3 python3-venv python3-pip nginx default-jre
 elif command -v dnf &>/dev/null; then
     dnf install -y python3 python3-pip nginx
 elif command -v yum &>/dev/null; then
