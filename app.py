@@ -120,15 +120,18 @@ def check_grammar():
             start = match.offset
             end = match.offset + match.errorLength
             faulty_text = text[start:end]
-            # Build a short context: 20 chars before and after
-            ctx_start = max(0, start - 20)
-            ctx_end = min(len(text), end + 20)
+            # Build context: 40 chars before and after
+            ctx_start = max(0, start - 40)
+            ctx_end = min(len(text), end + 40)
             context_before = text[ctx_start:start]
             context_after = text[end:ctx_end]
+            # Estimate line number
+            line_num = text[:start].count('\n') + 1
         except Exception:
             faulty_text = ''
             context_before = ''
             context_after = ''
+            line_num = None
 
         matches_dict.append({
             'message': match.message,
@@ -136,6 +139,7 @@ def check_grammar():
             'faulty': faulty_text,
             'context_before': context_before,
             'context_after': context_after,
+            'line': line_num,
         })
     return jsonify({'matches': matches_dict})
 

@@ -359,12 +359,28 @@
                     data.matches.forEach(m => {
                         let repl = m.replacements.slice(0, 3).join(', ');
                         let line = '';
-                        if (m.faulty && m.faulty.trim()) {
+
+                        // Build the context excerpt: always show surrounding text
+                        let contextHtml = '';
+                        const hasFaulty = m.faulty && m.faulty.trim().length > 0;
+                        if (m.context_before !== undefined || m.context_after !== undefined) {
+                            const before = (m.context_before || '').replace(/\n/g, ' ').trimStart();
+                            const after = (m.context_after || '').replace(/\n/g, ' ').trimEnd();
+                            const faultyDisplay = hasFaulty 
+                                ? '<mark class="px-0 bg-warning">' + m.faulty + '</mark>'
+                                : '<mark class="px-0 bg-warning">&#9251;</mark>'; // visible space symbol
+                            contextHtml = '<div class="text-muted small fst-italic mt-1 border-start border-2 border-warning ps-2">'
+                                + (m.line ? '<small class="badge bg-secondary me-1">ligne ' + m.line + '</small>' : '')
+                                + '...' + before + faultyDisplay + after + '...'
+                                + '</div>';
+                        }
+
+                        if (hasFaulty) {
                             line += '<span class="text-danger fw-semibold">«' + m.faulty.trim() + '»</span> : ';
                         }
                         line += m.message;
                         if (repl) line += ' <span class="text-success fw-semibold">→ ' + repl + '</span>';
-                        html += '<li>' + line + '</li>';
+                        html += '<li>' + line + contextHtml + '</li>';
                     });
                     html += '</ul>';
                     panelBody.innerHTML = html;
