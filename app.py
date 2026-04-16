@@ -115,19 +115,25 @@ def check_grammar():
     
     matches_dict = []
     for match in matches:
-        # Extract the faulty text snippet from the original text using offset
         try:
-            start = match.offset
-            end = match.offset + match.length  # correct attribute is 'length', not 'errorLength'
-            faulty_text = text[start:end]
-            # Build context: 40 chars before and after
-            ctx_start = max(0, start - 40)
-            ctx_end = min(len(text), end + 40)
-            context_before = text[ctx_start:start]
-            context_after = text[end:ctx_end]
-            # Estimate line number
-            line_num = text[:start].count('\n') + 1
-        except Exception:
+            m_offset = getattr(match, 'offset', None)
+            m_length = getattr(match, 'errorLength', getattr(match, 'length', None))
+            
+            if m_offset is not None and m_length is not None:
+                start = int(m_offset)
+                end = start + int(m_length)
+                faulty_text = text[start:end]
+                # Build context: 40 chars before and after
+                ctx_start = max(0, start - 40)
+                ctx_end = min(len(text), end + 40)
+                context_before = text[ctx_start:start]
+                context_after = text[end:ctx_end]
+                # Estimate line number
+                line_num = text[:start].count('\n') + 1
+            else:
+                raise ValueError(f"Missing offset/length. Attributes: {dir(match)}")
+        except Exception as e:
+            print(f"[Grammar Check Error] {e}", flush=True)
             faulty_text = ''
             context_before = ''
             context_after = ''
