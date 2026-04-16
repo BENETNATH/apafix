@@ -3,6 +3,8 @@
 
 {% block title %}Éditer Saisine - {{ dap.nom_projet }}{% endblock %}
 
+{% block container_class %}container-fluid px-4 px-xl-5{% endblock %}
+
 {% macro render_nested_form(form_obj, structured_data_node, is_root=false, parent_label_rendered=false) %}
     {% set current_label = structured_data_node.label %}
     {% set current_tag = structured_data_node.tag %}
@@ -113,17 +115,17 @@
 
 <div class="row">
     <!-- Sidebar Navigation -->
-    <div class="col-lg-2 col-md-3 d-none d-md-block border-end pe-2">
+    <div class="col-xl-2 col-lg-3 col-md-4 d-none d-md-block border-end pe-2">
         <div class="sidebar-wrapper">
-            <h6 class="text-muted mb-3 border-bottom pb-2 text-uppercase" style="font-size: 0.85rem; font-weight: bold;">Sommaire</h6>
-            <nav id="toc" class="nav nav-pills flex-column" style="font-size: 0.85rem; line-height: 1.2;">
+            <h6 class="text-muted mb-3 border-bottom pb-2 text-uppercase" style="font-size: 0.9rem; font-weight: bold;">Sommaire</h6>
+            <nav id="toc" class="nav nav-pills flex-column" style="font-size: 0.9rem; line-height: 1.3;">
                 <!-- JavaScript will populate this -->
             </nav>
         </div>
     </div>
 
     <!-- Main Content -->
-    <div class="col-lg-10 col-md-9 ms-sm-auto px-md-4">
+    <div class="col-xl-10 col-lg-9 col-md-8 ms-sm-auto px-md-4">
         <h1 class="mb-2">Éditer Saisine: {{ dap.nom_projet }}</h1>
         <p class="text-muted mb-4 pb-3 border-bottom">{{ dap.numero_reference }} (v{{ dap.version }})</p>
 
@@ -205,8 +207,29 @@
             a.href = '#' + id;
             a.title = heading.textContent;
             
+            // Customize text if it's a procedure section
+            let displayText = heading.textContent;
+            let lowerText = displayText.toLowerCase();
+            if (lowerText.includes("description détaillée de la procédure") || lowerText.includes("procédure expérimentale")) {
+                let nextEl = heading.nextElementSibling;
+                let foundTitle = null;
+                // Search subsequent siblings for the first text input/textarea
+                while (nextEl && !foundTitle && !nextEl.tagName.match(/^H[1-6]/)) {
+                    let input = nextEl.querySelector('input[type="text"], textarea');
+                    if (input && input.value && input.value.trim() !== '') {
+                        foundTitle = input.value.trim();
+                        // Truncate if insanely long
+                        if (foundTitle.length > 80) foundTitle = foundTitle.substring(0, 80) + '...';
+                    }
+                    nextEl = nextEl.nextElementSibling;
+                }
+                if (foundTitle) {
+                    displayText = "Proc. : " + foundTitle;
+                }
+            }
+            
             // Indent based on level and allow wrapping
-            a.textContent = heading.textContent;
+            a.textContent = displayText;
             a.style.marginLeft = ((level - 1) * 12) + 'px';
             a.style.whiteSpace = 'normal';
             a.style.wordBreak = 'break-word';
@@ -421,7 +444,7 @@
                     <div class="d-flex w-100 justify-content-between align-items-center">
                       <h6 class="mb-1 text-primary">${s.titre}</h6>
                       <div>
-                        ${s.can_delete ? \`<button type="button" class="btn btn-sm btn-link text-danger p-0 me-2 delete-snippet-btn" data-id="\${s.id}" title="Supprimer ce snippet"><i class="bi bi-trash"></i></button>\` : ''}
+                        ${s.can_delete ? '<button type="button" class="btn btn-sm btn-link text-danger p-0 me-2 delete-snippet-btn" data-id="' + s.id + '" title="Supprimer ce snippet"><i class="bi bi-trash"></i></button>' : ''}
                         <small class="text-muted"><i class="bi bi-person"></i> ${s.auteur}</small>
                       </div>
                     </div>

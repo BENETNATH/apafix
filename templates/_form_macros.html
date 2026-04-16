@@ -26,8 +26,8 @@
                     <span></span>
                 {% endif %}
                 <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-insert-btn" data-target="{{ field.id }}" title="Insérer un snippet" data-bs-toggle="modal" data-bs-target="#snippetSearchModal">Insérer Snippet</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-save-btn" data-target="{{ field.id }}" title="Sauvegarder ce texte en snippet">Sauvegarder</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-insert-btn" data-target="{{ field.id }}" title="Insérer un snippet" data-bs-toggle="modal" data-bs-target="#snippetSearchModal"><i class="bi bi-plus-lg"></i></button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm snippet-save-btn" data-target="{{ field.id }}" title="Sauvegarder ce texte en snippet"><i class="bi bi-floppy"></i></button>
                 </div>
             </div>
             {{ field(class="form-control check-grammar", rows="3") }}
